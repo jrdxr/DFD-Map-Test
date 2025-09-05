@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Vendor Map</title>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+        }
+        
+        #map {
+            height: 600px;
+            width: 100%;
+            border: 2px solid #333;
+            border-radius: 8px;
+        }
+        
+        .info-panel {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .state-info {
+            background: #f0f0f0;
+            padding: 10px;
+            margin-top: 10px;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .location-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+            overflow-y: scroll;
+            max-height: 300px;
+        }
+
+        .location-item {
+            background: white;
+            margin: 8px 0;
+            padding: 12px;
+            border-radius: 4px;
+            border-left: 4px solid #3388ff;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .location-item:hover {
+            background: #f8f8f8;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+        }
+
+        .location-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .location-address {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .leaflet-interactive:focus {
+            outline: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="info-panel">
+        <h1>Interactive State Map</h1>
+        <p>Click on any state to see vendor locations</p>
+        <div id="stateInfo" class="state-info"></div>
+    </div>
+    
+    <div id="map"></div>
+
+    <!-- Leaflet JavaScript -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script>
+        // Initialize the map
+        const map = L.map('map').setView([39.8283, -98.5795], 4);
+        
+        // Add tile layer (OpenStreetMap)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Variables to hold layers and data
+        let stateLayer;
+        let locationMarkers = L.layerGroup().addTo(map);
+        let locationsData = {};
+        let activeState = null;
+        
+        // Function to style each state
+        function styleState(feature) {
+            return {
+                fillColor: '#3388ff',
+                weight: 2,
+                opacity: 1,
+                color: 'white',
+                dashArray: '3',
+                fillOpacity: 0.5
+            };
+        }
+
+        // Function to style the active/selected state
+            function styleActiveState(feature) {
+                return {
+                    fillColor: 'red', // Orange/red color for active state
+                    weight: 3,
+                    opacity: 1,
+                    color: '#fff',
+                    dashArray: '',
+                    fillOpacity: 0.8
+                };
+            }
+        
+        // Function to highlight state on hover
+        function highlightFeature(e) {
+            const layer = e.target;
+
+            // Don't apply hover styling if this is the active state
+            if (activeState === layer) {
+                return;
+            }
+            
+            layer.setStyle({
+                weight: 3,
+                color: '#666',
+                dashArray: '',
+                fillOpacity: 0.7,
+                fillColor: '#ff7800'
+            });
+            
+            layer.bringToFront();
+        }
+        
+        // Function to reset highlight
+        function resetHighlight(e) {
+                if (activeState !== e.target) {
+        stateLayer.resetStyle(e.target);
+    }
+        }
+        
+        // Function to display locations for a state
+        function displayStateLocations(stateName, stateCode) {
+            const stateInfo = document.getElementById('stateInfo');
+            const stateLocations = locationsData[stateName] || locationsData[stateCode] || [];
+            
+            if (stateLocations.length === 0) {
+                stateInfo.innerHTML = `
+                    <h3>${stateName}</h3>
+                    <p>No vendor locations found in this state.</p>
+                `;
+            } else {
+                const locationsList = stateLocations.map((location, index) => `
+                    <li class="location-item" data-location-index="${index}" data-state="${stateName}">
+                        <div class="location-name">${location.name}</div>
+                        <div class="location-address">${location.address}</div>
+                    </li>
+                `).join('');
+                
+                stateInfo.innerHTML = `
+                    <h3>${stateName} Vendors (${stateLocations.length})</h3>
+                    <ul class="location-list">
+                        ${locationsList}
+                    </ul>
+                `;
+                
+                // Add click handlers to location items
+                const locationItems = stateInfo.querySelectorAll('.location-item');
+                locationItems.forEach(item => {
+                    item.addEventListener('click', handleLocationClick);
+                });
+            }
+            
+            stateInfo.style.display = 'block';
+        }
+        
+        // Function to add location markers to map
+        function showLocationMarkers(stateName, stateCode) {
+            // Clear existing markers
+            locationMarkers.clearLayers();
+            
+            const stateLocations = locationsData[stateName] || locationsData[stateCode] || [];
+            
+            stateLocations.forEach(location => {
+                if (location.lat && location.lng) {
+                    const marker = L.marker([location.lat, location.lng])
+                        .bindPopup(`
+                            <strong>${location.name}</strong><br>
+                            ${location.address}
+                        `);
+                    locationMarkers.addLayer(marker);
+                }
+            });
+        }
+
+                // Function to handle location item clicks
+        function handleLocationClick(e) {
+            const locationIndex = parseInt(e.currentTarget.dataset.locationIndex);
+            const stateName = e.currentTarget.dataset.state;
+            const stateCode = e.currentTarget.dataset.stateCode;
+            
+            const stateLocations = locationsData[stateName] || locationsData[stateCode] || [];
+            const location = stateLocations[locationIndex];
+            
+            if (location && location.lat && location.lng) {
+                // Find the corresponding marker and open its popup
+                locationMarkers.eachLayer(marker => {
+                    const markerLatLng = marker.getLatLng();
+                    if (markerLatLng.lat === location.lat && markerLatLng.lng === location.lng) {
+                        marker.openPopup();
+                        // Optional: pan to the marker
+                        map.setView([location.lat, location.lng], 12);
+                    }
+                });
+            }
+        }
+        
+        // Function to handle state click
+        function onStateClick(e) {
+            const properties = e.target.feature.properties;
+            const stateName = properties.NAME;
+            const stateCode = properties.STATE;
+
+                // Reset previous active state styling
+            if (activeState && activeState !== e.target) {
+                stateLayer.resetStyle(activeState);
+            }
+
+                            // Set new active state
+                activeState = e.target;
+                
+                // Apply active state styling
+                e.target.setStyle(styleActiveState());
+                e.target.bringToFront();
+            
+            // Display locations in info panel
+            displayStateLocations(stateName, stateCode);
+            
+            // Show location markers on map
+            showLocationMarkers(stateName, stateCode);
+            
+            // Zoom to state
+            map.fitBounds(e.target.getBounds());
+            
+            console.log('Clicked state:', stateName);
+        }
+        
+        // Function to bind events to each feature
+        function onEachFeature(feature, layer) {
+            layer.on({
+                mouseover: highlightFeature,
+                mouseout: resetHighlight,
+                click: onStateClick
+            });
+            
+            // Add tooltip with state name
+            layer.bindTooltip(feature.properties.NAME, {
+                permanent: false,
+                direction: 'center',
+                className: 'state-tooltip'
+            });
+        }
+        
+        // Load locations data
+        async function loadLocationsData() {
+            try {
+                const response = await fetch('./data/locations.json');
+                locationsData = await response.json();
+                console.log('Locations data loaded:', locationsData);
+            } catch (error) {
+                console.error('Error loading locations data:', error);
+            }
+        }
+        
+        // Load GeoJSON data
+        async function loadStatesData() {
+            try {
+                const response = await fetch('./data/states.json');
+                const geoJsonData = await response.json();
+                
+                // Add GeoJSON layer to map
+                stateLayer = L.geoJSON(geoJsonData, {
+                    style: styleState,
+                    onEachFeature: onEachFeature
+                }).addTo(map);
+            
+                
+            } catch (error) {
+                console.error('Error loading GeoJSON data:', error);
+                alert('Failed to load map data. Please check that data/states.json exists.');
+            }
+        }
+        
+        // Load all data when page loads
+        async function initializeMap() {
+            await loadLocationsData();
+            await loadStatesData();
+        }
+        
+        initializeMap();
+    </script>
+</body>
+</html>

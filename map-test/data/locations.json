@@ -1,0 +1,62 @@
+{
+  "Maine": [
+    {
+      "name": "The Lost Kitchen",
+      "address": "22 Mill St, Freedom, ME 04941",
+      "lat": 44.5092,
+      "lng": -69.3126
+    },
+    {
+      "name": "Holy Donut",
+      "address": "194 Park Ave, Portland, ME 04102",
+      "lat": 43.6591,
+      "lng": -70.2568
+    },
+    {
+      "name": "Duckfat",
+      "address": "43 Middle St, Portland, ME 04101",
+      "lat": 43.6560,
+      "lng": -70.2553
+    }
+  ],
+"New Hampshire": [
+  {
+    "name": "The Common Man",
+    "address": "60 Main St, Lincoln, NH 03251",
+    "lat": 44.0581,
+    "lng": -71.6675
+  },
+  {
+    "name": "Portsmouth Brewery",
+    "address": "56 Market St, Portsmouth, NH 03801",
+    "lat": 43.0759,
+    "lng": -70.7626
+  },
+  {
+    "name": "Hanover Street Chophouse",
+    "address": "27 S Main St, Hanover, NH 03755",
+    "lat": 43.7022,
+    "lng": -72.2887
+  }
+],
+"Vermont": [
+  {
+    "name": "Hen of the Wood",
+    "address": "92 Stowe St, Waterbury, VT 05676",
+    "lat": 44.3370,
+    "lng": -72.7562
+  },
+  {
+    "name": "Prohibition Pig",
+    "address": "23 S Main St, Waterbury, VT 05676",
+    "lat": 44.3348,
+    "lng": -72.7567
+  },
+  {
+    "name": "The Farmhouse Tap & Grill",
+    "address": "160 Bank St, Burlington, VT 05401",
+    "lat": 44.4759,
+    "lng": -73.2121
+  } 
+ ]
+}
